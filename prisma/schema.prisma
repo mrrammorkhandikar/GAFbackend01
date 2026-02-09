@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Configure seed script
+// To run: npx prisma db seed
+// Or: npm run seed
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+///////////////////////////
+// ADMIN AUTH
+///////////////////////////
+
+model Admin {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+///////////////////////////
+// CAMPAIGNS
+///////////////////////////
+
+model Campaign {
+  id            String   @id @default(uuid())
+  title         String
+  slug          String   @unique
+  description   String
+  location      String
+  amount        Int?
+  raisedAmount  Int?
+  imageUrl      String?
+
+  // content structure (handled in Admin UI):
+  // {
+  //   about: string[]                // multiple paragraphs
+  //   impactGallery: string[]        // max 4 image URLs
+  //   keyFocusAreas: string[]        // max 8 UL points
+  // }
+  content       Json?
+
+  startDate     DateTime
+  endDate       DateTime?
+  isActive      Boolean  @default(true)
+
+  events        Event[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+///////////////////////////
+// EVENTS
+///////////////////////////
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String
+  imageUrl    String?
+  eventDate   DateTime
+  location    String
+  isActive    Boolean  @default(true)
+
+  // content structure:
+  // {
+  //   about: string[]                     // paragraphs
+  //   journey: {
+  //     title: string
+  //     description: string
+  //     imageUrl?: string
+  //   }[]
+  //   keyAchievements: string[]           // max 8 UL points
+  // }
+  content     Json?
+
+  campaignId  String?
+  campaign    Campaign? @relation(fields: [campaignId], references: [id])
+
+  registrations EventRegistration[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+///////////////////////////
+// EVENT REGISTRATIONS
+///////////////////////////
+
+model EventRegistration {
+  id        String   @id @default(uuid())
+  eventId   String
+  name      String
+  email     String
+  mobile    String
+
+  event     Event @relation(fields: [eventId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+///////////////////////////
+// VOLUNTEER OPPORTUNITIES
+///////////////////////////
+
+model VolunteerOpportunity {
+  id           String   @id @default(uuid())
+  title        String
+  description  String
+
+  // requirements: UL style points
+  // benefits: UL style points
+  requirements Json
+  benefits     Json
+
+  isActive     Boolean  @default(true)
+  volunteers   Volunteer[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+///////////////////////////
+// VOLUNTEER FORM SUBMISSIONS
+///////////////////////////
+
+model Volunteer {
+  id            String   @id @default(uuid())
+  name          String
+  email         String
+  phone         String
+  opportunityId String
+
+  opportunity   VolunteerOpportunity @relation(fields: [opportunityId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
+
+///////////////////////////
+// CAREER OPPORTUNITIES
+///////////////////////////
+
+model Career {
+  id             String   @id @default(uuid())
+  title          String
+  description    String
+  location       String
+  employmentType String // Full-time, Part-time, Internship
+  isActive       Boolean  @default(true)
+
+  applications   CareerApplication[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+///////////////////////////
+// CAREER APPLICATIONS
+///////////////////////////
+
+model CareerApplication {
+  id        String   @id @default(uuid())
+  careerId  String
+  name      String
+  email     String
+  phone     String
+  resumeUrl String?
+
+  career    Career @relation(fields: [careerId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+///////////////////////////
+// TEAM MEMBERS (STATIC)
+///////////////////////////
+
+model TeamMember {
+  id          String   @id @default(uuid())
+  name        String
+  position    String
+  bio         String?
+  imageUrl    String?
+  email       String?
+  linkedinUrl String?
+  twitterUrl  String?
+  isActive    Boolean  @default(true)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+///////////////////////////
+// DONATIONS
+///////////////////////////
+
+model Donation {
+  id          String   @id @default(uuid())
+  donorName   String
+  donorEmail  String
+  amount      Float
+  currency    String   @default("USD")
+  message     String?
+  isAnonymous Boolean  @default(false)
+  status      String   @default("pending")
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+///////////////////////////
+// CONTACT FORM
+///////////////////////////
+
+model ContactForm {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  status    String   @default("new")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
