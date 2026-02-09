@@ -46,14 +46,18 @@ app.use(cors({
     
     // In production, allow specific origins
     const allowedOrigins = [
-      'https://your-frontend-domain.com',
-      'https://your-frontend-domain.netlify.app',
-      'https://your-frontend-domain.vercel.app'
-    ]
+      process.env.FRONTEND_URL,
+      'https://gaf-frontend.vercel.app',
+      'https://gafbackend.vercel.app'
+    ].filter(Boolean) // Remove undefined values
     
-    if (allowedOrigins.includes(origin)) {
+    // Allow Vercel preview deployments (dynamic subdomains)
+    const isVercelPreview = origin.endsWith('.vercel.app')
+    
+    if (allowedOrigins.includes(origin) || isVercelPreview) {
       callback(null, true)
     } else {
+      console.log('Blocked by CORS:', origin)
       callback(new Error('Not allowed by CORS'))
     }
   },
@@ -130,4 +134,10 @@ const startServer = async () => {
   }
 }
 
-startServer()
+// Only start the server if running directly (not imported)
+import { fileURLToPath } from 'url'
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  startServer()
+}
+
+export default app
