@@ -113,7 +113,7 @@ export const updateVolunteerOpportunity = [
         description,
         requirements: requirements ? (typeof requirements === 'string' ? JSON.parse(requirements) : requirements) : existingOpportunity.requirements,
         benefits: benefits ? (typeof benefits === 'string' ? JSON.parse(benefits) : benefits) : existingOpportunity.benefits,
-        isActive: isActive !== undefined ? Boolean(isActive) : existingOpportunity.isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingOpportunity.isActive
       }
     })
     

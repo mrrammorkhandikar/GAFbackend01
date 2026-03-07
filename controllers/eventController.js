@@ -260,7 +260,7 @@ export const updateEvent = [
         eventDate: eventDate ? new Date(eventDate) : existingEvent.eventDate,
         location,
         campaignId: campaignId !== undefined ? campaignId : existingEvent.campaignId,
-        isActive: isActive !== undefined ? Boolean(isActive) : existingEvent.isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingEvent.isActive
       }
     })
     

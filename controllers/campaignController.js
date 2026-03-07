@@ -87,11 +87,17 @@ export const getCampaignById = asyncHandler(async (req, res) => {
 
 // POST /api/campaigns - Create new campaign
 export const createCampaign = [
-  uploadImage.single('image'),
+  uploadImage.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'galleryImage_0', maxCount: 1 },
+    { name: 'galleryImage_1', maxCount: 1 },
+    { name: 'galleryImage_2', maxCount: 1 },
+    { name: 'galleryImage_3', maxCount: 1 }
+  ]),
   ...campaignValidationRules,
   validateRequest,
   asyncHandler(async (req, res) => {
-    const { title, slug, description, content, startDate, endDate } = req.body
+    const { title, slug, description, content, startDate, endDate, location, amount, raisedAmount } = req.body
     
     // Check if slug already exists
     const existingCampaign = await prisma.campaign.findUnique({
@@ -106,22 +112,47 @@ export const createCampaign = [
     }
     
     let imageUrl = null
-    if (req.file) {
+    const files = req.files || {}
+    
+    if (files.image?.[0]) {
       try {
-        const fileName = generateFileName(req.file.originalname, 'campaign-')
+        const fileName = generateFileName(files.image[0].originalname, 'campaign-')
         const bucketName = getBucketConfig('campaigns')
-        
-        const uploadResult = await uploadFile(
-          bucketName,
-          fileName,
-          req.file.buffer,
-          req.file.mimetype
-        )
+        const uploadResult = await uploadFile(bucketName, fileName, files.image[0].buffer, files.image[0].mimetype)
         imageUrl = uploadResult.url
       } catch (error) {
-        console.error('Error uploading image:', error)
-        // Continue without image if upload fails
+        console.error('Error uploading featured image:', error)
       }
+    }
+    
+    // Parse existing content and merge gallery uploads
+    let parsedContent = null
+    try {
+      parsedContent = content ? JSON.parse(content) : {}
+    } catch {
+      parsedContent = {}
+    }
+    
+    // Upload gallery images and merge with any existing gallery URLs
+    const galleryUrls = Array.isArray(parsedContent.impactGallery) ? [...parsedContent.impactGallery] : []
+    for (let i = 0; i < 4; i++) {
+      const galleryFile = files[`galleryImage_${i}`]?.[0]
+      if (galleryFile) {
+        try {
+          const fileName = generateFileName(galleryFile.originalname, `gallery-${i}-`)
+          const bucketName = getBucketConfig('campaigns')
+          const uploadResult = await uploadFile(bucketName, fileName, galleryFile.buffer, galleryFile.mimetype)
+          while (galleryUrls.length <= i) galleryUrls.push(null)
+          galleryUrls[i] = uploadResult.url
+        } catch (error) {
+          console.error(`Error uploading gallery image ${i}:`, error)
+        }
+      }
+    }
+    
+    const finalContent = {
+      ...parsedContent,
+      impactGallery: galleryUrls.filter(Boolean)
     }
     
     const campaign = await prisma.campaign.create({
@@ -129,7 +160,10 @@ export const createCampaign = [
         title,
         slug,
         description,
-        content: content || null,
+        location: location || '',
+        amount: amount ? parseInt(amount) : null,
+        raisedAmount: raisedAmount ? parseInt(raisedAmount) : null,
+        content: Object.keys(finalContent).length > 0 ? finalContent : null,
         imageUrl,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null
@@ -146,13 +180,19 @@ export const createCampaign = [
 
 // PUT /api/campaigns/:id - Update campaign
 export const updateCampaign = [
-  uploadImage.single('image'),
+  uploadImage.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'galleryImage_0', maxCount: 1 },
+    { name: 'galleryImage_1', maxCount: 1 },
+    { name: 'galleryImage_2', maxCount: 1 },
+    { name: 'galleryImage_3', maxCount: 1 }
+  ]),
   param('id').isUUID().withMessage('Valid campaign ID is required'),
   ...campaignValidationRules,
   validateRequest,
   asyncHandler(async (req, res) => {
     const { id } = req.params
-    const { title, slug, description, content, startDate, endDate, isActive } = req.body
+    const { title, slug, description, content, startDate, endDate, isActive, location, amount, raisedAmount } = req.body
     
     // Check if campaign exists
     const existingCampaign = await prisma.campaign.findUnique({
@@ -180,28 +220,51 @@ export const updateCampaign = [
       }
     }
     
+    const files = req.files || {}
     let imageUrl = existingCampaign.imageUrl
-    if (req.file) {
+    
+    if (files.image?.[0]) {
       try {
-        // Delete old image if exists
         if (existingCampaign.imageUrl) {
           const oldFileName = existingCampaign.imageUrl.split('/').pop()
           await deleteFile(getBucketConfig('campaigns'), oldFileName)
         }
-        
-        const fileName = generateFileName(req.file.originalname, 'campaign-')
+        const fileName = generateFileName(files.image[0].originalname, 'campaign-')
         const bucketName = getBucketConfig('campaigns')
-        
-        const uploadResult = await uploadFile(
-          bucketName,
-          fileName,
-          req.file.buffer,
-          req.file.mimetype
-        )
+        const uploadResult = await uploadFile(bucketName, fileName, files.image[0].buffer, files.image[0].mimetype)
         imageUrl = uploadResult.url
       } catch (error) {
-        console.error('Error uploading image:', error)
+        console.error('Error uploading featured image:', error)
       }
+    }
+    
+    // Parse content and merge gallery uploads
+    let parsedContent = null
+    try {
+      parsedContent = content ? JSON.parse(content) : (existingCampaign.content || {})
+    } catch {
+      parsedContent = existingCampaign.content || {}
+    }
+    
+    const galleryUrls = Array.isArray(parsedContent.impactGallery) ? [...parsedContent.impactGallery] : []
+    for (let i = 0; i < 4; i++) {
+      const galleryFile = files[`galleryImage_${i}`]?.[0]
+      if (galleryFile) {
+        try {
+          const fileName = generateFileName(galleryFile.originalname, `gallery-${i}-`)
+          const bucketName = getBucketConfig('campaigns')
+          const uploadResult = await uploadFile(bucketName, fileName, galleryFile.buffer, galleryFile.mimetype)
+          while (galleryUrls.length <= i) galleryUrls.push(null)
+          galleryUrls[i] = uploadResult.url
+        } catch (error) {
+          console.error(`Error uploading gallery image ${i}:`, error)
+        }
+      }
+    }
+    
+    const finalContent = {
+      ...parsedContent,
+      impactGallery: galleryUrls.filter(Boolean)
     }
     
     const campaign = await prisma.campaign.update({
@@ -210,11 +273,14 @@ export const updateCampaign = [
         title,
         slug,
         description,
-        content: content || null,
+        location: location || existingCampaign.location,
+        amount: amount !== undefined ? (amount ? parseInt(amount) : null) : existingCampaign.amount,
+        raisedAmount: raisedAmount !== undefined ? (raisedAmount ? parseInt(raisedAmount) : null) : existingCampaign.raisedAmount,
+        content: Object.keys(finalContent).length > 0 ? finalContent : null,
         imageUrl,
         startDate: startDate ? new Date(startDate) : existingCampaign.startDate,
         endDate: endDate ? new Date(endDate) : existingCampaign.endDate,
-        isActive: isActive !== undefined ? Boolean(isActive) : existingCampaign.isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingCampaign.isActive
       }
     })
     

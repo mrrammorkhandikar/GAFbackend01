@@ -105,7 +105,7 @@ export const createTeamMember = [
         email: email || null,
         linkedinUrl: linkedinUrl || null,
         twitterUrl: twitterUrl || null,
-        isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : true
       }
     })
     
@@ -172,7 +172,7 @@ export const updateTeamMember = [
         email: email || null,
         linkedinUrl: linkedinUrl || null,
         twitterUrl: twitterUrl || null,
-        isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingTeamMember.isActive
       }
     })
     

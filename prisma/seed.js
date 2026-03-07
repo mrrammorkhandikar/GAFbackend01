@@ -81,16 +81,42 @@ async function seed() {
           }),
           startDate: new Date('2024-03-01'),
           isActive: true
-        }
+        },
+        {
+          title: 'Healthy Smile for Underprivileged Children',
+          slug: 'healthy-smile-underprivileged-children',
+          description:
+            'Providing preventive and restorative dental care for children in low-income communities.',
+          location: 'Mumbai, India',
+          amount: 30000,
+          raisedAmount: 12000,
+          content: JSON.stringify({
+            about: [
+              'In partnership with local schools and dental colleges, we organize regular dental screening camps for underprivileged children.',
+              'The program focuses on prevention, early diagnosis, and creating lifelong healthy oral hygiene habits.',
+            ],
+            impactGallery: [
+              'https://example.com/dental1.jpg',
+              'https://example.com/dental2.jpg',
+            ],
+            keyFocusAreas: [
+              'Free dental check-ups and treatments',
+              'Dental hygiene education sessions',
+              'Distribution of toothbrushes and toothpaste kits',
+            ],
+          }),
+          startDate: new Date('2024-05-01'),
+          isActive: true,
+        },
       ],
-      skipDuplicates: true
+      skipDuplicates: true,
     })
     
     console.log(`✅ Created ${campaigns.count} campaigns`)
     
     // Create sample events
     const globalHealthCampaign = await prisma.campaign.findUnique({
-      where: { slug: 'global-health-initiative' }
+      where: { slug: 'global-health-initiative' },
     })
     
     if (globalHealthCampaign) {
@@ -129,10 +155,42 @@ async function seed() {
               ]
             }),
             campaignId: globalHealthCampaign.id,
-            isActive: true
-          }
+            isActive: true,
+          },
+          {
+            title: 'Self Medication & Drug Abuse Awareness Rally',
+            slug: 'self-medication-drug-abuse-awareness-rally',
+            description:
+              'Community awareness march and talks on the dangers of self-medication and substance abuse.',
+            eventDate: new Date('2024-09-10'),
+            location: 'Pune, India',
+            content: JSON.stringify({
+              about: [
+                'A city-wide awareness march bringing together youth groups, doctors, and local leaders.',
+                'Interactive sessions on mental health, addiction, and safe medication practices.',
+              ],
+              journey: [
+                {
+                  title: 'Awareness March',
+                  description:
+                    'Volunteers and partners walk through key locations with banners and street plays.',
+                },
+                {
+                  title: 'Community Sessions',
+                  description:
+                    'Doctors and counsellors hold open Q&A sessions in public spaces.',
+                },
+              ],
+              keyAchievements: [
+                'Reached over 3,000 young people in one day',
+                'Collaborated with local colleges and health authorities',
+              ],
+            }),
+            campaignId: globalHealthCampaign.id,
+            isActive: true,
+          },
         ],
-        skipDuplicates: true
+        skipDuplicates: true,
       })
       
       console.log(`✅ Created ${events.count} events`)
@@ -247,6 +305,100 @@ async function seed() {
     })
     
     console.log(`✅ Created ${teamMembers.count} team members`)
+
+    // Create sample partners
+    const partners = await prisma.partner.createMany({
+      data: [
+        {
+          name: 'Zen Medical Hospital',
+          slug: 'zen-medical-hospital',
+          type: 'Organization',
+          shortDescription:
+            'A multi-specialty hospital partnering with us to deliver community health camps and medical outreach.',
+          websiteUrl: 'https://zen-medical.example.com',
+          country: 'India',
+          city: 'Mumbai',
+          isFeatured: true,
+          isActive: true,
+          content: JSON.stringify({
+            about: [
+              'Zen Medical Hospital is a long-term healthcare partner committed to serving low-income communities alongside Guru Akanksha Foundation.',
+              'From free OPD days to specialized pediatric dental camps, Zen Medical brings high-quality clinical care to people who otherwise cannot access it.',
+            ],
+            programs: [
+              'Quarterly multi-specialty mega health camps',
+              'School-based dental and nutrition check-ups',
+              'Pro-bono specialist consultations for critical cases',
+            ],
+            highlights: [
+              'Over 4,000 patients served through joint health camps',
+              'Introduced standardized referral pathways to tertiary care',
+            ],
+            quote: {
+              text:
+                'Partnering with Guru Akanksha Foundation helped us take quality healthcare outside our hospital walls and into the heart of communities.',
+              author: 'Dr. Kavita Rao',
+              role: 'Medical Director, Zen Medical Hospital',
+            },
+          }),
+        },
+        {
+          name: 'Bright Minds Coaching Circle',
+          slug: 'bright-minds-coaching-circle',
+          type: 'Organization',
+          shortDescription:
+            'An education collective helping us run bridge courses, mentoring, and career guidance for adolescents.',
+          websiteUrl: 'https://brightminds.example.com',
+          country: 'India',
+          city: 'Pune',
+          isFeatured: false,
+          isActive: true,
+          content: JSON.stringify({
+            about: [
+              'Bright Minds Coaching Circle works with our field teams to identify students at risk of dropping out and offers them tailored academic support.',
+              'Together we run evening learning centers, exam prep bootcamps, and soft-skills workshops.',
+            ],
+            programs: [
+              'Exam readiness bootcamps for grades 9–12',
+              'Mentoring circles for first-generation college aspirants',
+            ],
+            highlights: [
+              'Improved pass rates by 25% across partner schools',
+              'Supported more than 200 first-generation learners into higher education pathways',
+            ],
+          }),
+        },
+        {
+          name: 'Dr. Ananya Verma',
+          slug: 'dr-ananya-verma',
+          type: 'Individual',
+          shortDescription:
+            'A volunteer pediatric dentist who leads our flagship “Healthy Smile” program for children.',
+          websiteUrl: null,
+          country: 'India',
+          city: 'Mumbai',
+          isFeatured: true,
+          isActive: true,
+          content: JSON.stringify({
+            about: [
+              'Dr. Ananya has designed playful, child-friendly dental awareness modules that demystify oral health for young children.',
+              'She leads a team of volunteer dentists and students who travel with our mobile dental unit.',
+            ],
+            programs: [
+              'Healthy Smile school-based dental camps',
+              'Parent education sessions on nutrition and oral hygiene',
+            ],
+            highlights: [
+              'Screened more than 1,500 children across 12 schools',
+              'Built a replicable dental awareness curriculum now used by other partners',
+            ],
+          }),
+        },
+      ],
+      skipDuplicates: true,
+    })
+    
+    console.log(`✅ Created ${partners.count} partners`)
     
     console.log('🎉 Database seeding completed successfully!')
   } catch (error) {

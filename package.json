@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "build": "prisma generate",
+    "postinstall": "prisma generate",
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "studio": "prisma studio",
@@ -41,6 +42,7 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
+    "pg": "^8.20.0",
     "prisma": "^5.22.0"
   }
 }

@@ -196,7 +196,7 @@ export const updateVolunteerOpportunity = [
         description,
         requirements: parsedRequirements,
         benefits: parsedBenefits,
-        isActive: isActive !== undefined ? Boolean(isActive) : existingOpportunity.isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingOpportunity.isActive
       }
     })
     

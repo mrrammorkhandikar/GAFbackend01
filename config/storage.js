@@ -1,70 +1,30 @@
 import { supabase } from '../config/supabase.js'
 
-// Create storage buckets for the application
+// Verify storage is accessible by doing a quick probe upload
 export const initializeStorageBuckets = async () => {
-  try {
-    const buckets = [
-      {
-        name: process.env.CAMPAIGNS_BUCKET || 'campaigns-images',
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/*']
-      },
-      {
-        name: process.env.EVENTS_BUCKET || 'events-images',
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/*']
-      },
-      {
-        name: process.env.TEAM_BUCKET || 'team-photos',
-        public: true,
-        fileSizeLimit: 5242880, // 5MB
-        allowedMimeTypes: ['image/*']
-      },
-      {
-        name: process.env.DONATIONS_BUCKET || 'receipts',
-        public: false,
-        fileSizeLimit: 10485760, // 10MB
-        allowedMimeTypes: ['application/pdf', 'image/*']
-      }
-    ]
+  const BUCKETS = [
+    process.env.CAMPAIGNS_BUCKET || 'campaigns-images',
+    process.env.EVENTS_BUCKET    || 'events-images',
+    process.env.TEAM_BUCKET      || 'team-photos',
+    process.env.PARTNERS_BUCKET  || 'partners-logos',
+  ]
 
-    console.log('Initializing storage buckets...')
-    
-    for (const bucket of buckets) {
-      // Check if bucket exists
-      const { data: existingBuckets, error: listError } = await supabase.storage.listBuckets()
-      
-      if (listError) {
-        console.error(`Error listing buckets: ${listError.message}`)
-        continue
-      }
+  let ok = 0
+  const probe = Buffer.from([0xff, 0xd8, 0xff, 0xd9]) // minimal JPEG
 
-      const bucketExists = existingBuckets.some(b => b.name === bucket.name)
-      
-      if (!bucketExists) {
-        // Create bucket
-        const { error: createError } = await supabase.storage.createBucket(bucket.name, {
-          public: bucket.public,
-          fileSizeLimit: bucket.fileSizeLimit,
-          allowedMimeTypes: bucket.allowedMimeTypes
-        })
-
-        if (createError) {
-          console.error(`Error creating bucket ${bucket.name}: ${createError.message}`)
-        } else {
-          console.log(`✅ Created bucket: ${bucket.name}`)
-        }
-      } else {
-        console.log(`✅ Bucket already exists: ${bucket.name}`)
-      }
+  for (const bucket of BUCKETS) {
+    const { error } = await supabase.storage
+      .from(bucket)
+      .upload('_probe.jpg', probe, { contentType: 'image/jpeg', upsert: true })
+    if (!error) {
+      await supabase.storage.from(bucket).remove(['_probe.jpg'])
+      ok++
+    } else {
+      console.warn(`⚠  Storage bucket "${bucket}" not accessible: ${error.message}`)
     }
-
-    console.log('Storage buckets initialization completed!')
-  } catch (error) {
-    console.error('Error initializing storage buckets:', error)
   }
+
+  console.log(`✅ Storage ready: ${ok}/${BUCKETS.length} buckets accessible`)
 }
 
 // Get bucket configuration
@@ -73,6 +33,7 @@ export const getBucketConfig = (bucketType) => {
     campaigns: process.env.CAMPAIGNS_BUCKET || 'campaigns-images',
     events: process.env.EVENTS_BUCKET || 'events-images',
     team: process.env.TEAM_BUCKET || 'team-photos',
+    partners: process.env.PARTNERS_BUCKET || 'partners-logos',
     donations: process.env.DONATIONS_BUCKET || 'receipts'
   }
 

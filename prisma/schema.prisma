@@ -202,6 +202,40 @@ model TeamMember {
 }
 
 ///////////////////////////
+// PARTNERS
+///////////////////////////
+
+model Partner {
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  type             String   // Organization, Individual, Corporate, NGO, etc.
+  logoUrl          String?
+  shortDescription String
+  websiteUrl       String?
+  country          String?
+  city             String?
+  isFeatured       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+
+  // Rich storytelling content:
+  // {
+  //   about: string[]              // partner story paragraphs
+  //   programs: string[]           // joint programs/events summary bullets
+  //   highlights: string[]         // key impact points
+  //   quote?: {                    // optional quote block
+  //     text: string
+  //     author?: string
+  //     role?: string
+  //   }
+  // }
+  content          Json?
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+///////////////////////////
 // DONATIONS
 ///////////////////////////
 
@@ -210,7 +244,7 @@ model Donation {
   donorName   String
   donorEmail  String
   amount      Float
-  currency    String   @default("USD")
+  currency    String   @default("INR")
   message     String?
   isAnonymous Boolean  @default(false)
   status      String   @default("pending")

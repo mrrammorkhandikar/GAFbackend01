@@ -7,7 +7,7 @@ const prisma = new PrismaClient()
 // Public endpoint to get all data without restrictions
 router.get('/all-data', async (req, res) => {
   try {
-    const [campaigns, events, teamMembers] = await Promise.all([
+    const [campaigns, events, teamMembers, partners] = await Promise.all([
       prisma.campaign.findMany({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' }
@@ -19,6 +19,13 @@ router.get('/all-data', async (req, res) => {
       prisma.teamMember.findMany({
         where: { isActive: true },
         orderBy: { createdAt: 'desc' }
+      }),
+      prisma.partner.findMany({
+        where: { isActive: true },
+        orderBy: [
+          { isFeatured: 'desc' },
+          { createdAt: 'desc' }
+        ]
       })
     ])
 
@@ -27,7 +34,8 @@ router.get('/all-data', async (req, res) => {
       data: {
         campaigns,
         events,
-        teamMembers
+        teamMembers,
+        partners
       }
     })
   } catch (error) {

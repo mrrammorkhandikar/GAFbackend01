@@ -17,6 +17,7 @@ import careerApplicationRoutes from './routes/career-applications.js'
 import eventRegistrationRoutes from './routes/event-registrations.js'
 import adminRoutes from './routes/admin.js'
 import publicRoutes from './routes/public.js'
+import partnerRoutes from './routes/partners.js'
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
@@ -91,6 +92,7 @@ app.use('/api/volunteer-submissions', volunteerSubmissionRoutes)
 app.use('/api/careers', careerRoutes)
 app.use('/api/career-applications', careerApplicationRoutes)
 app.use('/api/event-registrations', eventRegistrationRoutes)
+app.use('/api/partners', partnerRoutes)
 app.use('/api/admin', adminRoutes)
 
 // Public routes - Unrestricted access to data
