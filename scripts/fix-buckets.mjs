@@ -2,13 +2,8 @@
  * Diagnose and fix Supabase storage bucket issues
  * Run: node scripts/fix-buckets.mjs
  */
+import '../lib/loadEnv.js'
 import { createClient } from '@supabase/supabase-js'
-import * as dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: join(__dirname, '../.env') })
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY)
 

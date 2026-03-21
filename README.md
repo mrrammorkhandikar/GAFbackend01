@@ -13,12 +13,9 @@ npm install
 ```
 
 ### 2. Environment Configuration
-Copy `.env.example` to `.env` and configure:
-```bash
-cp .env.example .env
-```
+Create `backend/.env` in this folder. The app loads **only** this file (see `lib/loadEnv.js`); it does not read `.env.vercel` or `.env.example` at runtime.
 
-Fill in your Supabase credentials:
+Required variables include:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_KEY` - Your Supabase anon/public key
 - `DATABASE_URL` - Your PostgreSQL connection string

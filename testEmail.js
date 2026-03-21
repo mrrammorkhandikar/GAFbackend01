@@ -1,4 +1,4 @@
-import 'dotenv/config'
+import './lib/loadEnv.js'
 import { sendEmail } from './config/email.js'
 
 const run = async () => {

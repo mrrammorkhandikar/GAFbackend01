@@ -5,13 +5,8 @@
  * 3. Create the partners-logos bucket if missing
  * Run: node scripts/fix-storage-sql.mjs
  */
+import '../lib/loadEnv.js'
 import pg from 'pg'
-import * as dotenv from 'dotenv'
-import { fileURLToPath } from 'url'
-import { dirname, join } from 'path'
-
-const __dirname = dirname(fileURLToPath(import.meta.url))
-dotenv.config({ path: join(__dirname, '../.env') })
 
 const { Client } = pg
 const client = new Client({ connectionString: process.env.DATABASE_URL })

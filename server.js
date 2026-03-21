@@ -1,7 +1,7 @@
+import './lib/loadEnv.js'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
-import dotenv from 'dotenv'
 import prisma from './lib/prisma.js'
 
 // Import routes
@@ -25,8 +25,6 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
 
 // Import config
 import { initializeStorageBuckets } from './config/storage.js'
-
-dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3001
