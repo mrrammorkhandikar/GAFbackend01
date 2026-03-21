@@ -40,9 +40,9 @@ const eventValidationRules = [
 // GET /api/events - Get all events
 export const getEvents = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, active, isActive, upcoming, campaignId } = req.query
-  
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
+
+  const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
+  const limitNum = Math.min(200, Math.max(1, parseInt(String(limit), 10) || 10))
   const skip = (pageNum - 1) * limitNum
   
   const where = {}

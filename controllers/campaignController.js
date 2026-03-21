@@ -17,9 +17,9 @@ const campaignValidationRules = [
 // GET /api/campaigns - Get all campaigns
 export const getCampaigns = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, active, isActive } = req.query
-  
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
+
+  const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
+  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10))
   const skip = (pageNum - 1) * limitNum
   
   const where = {}
