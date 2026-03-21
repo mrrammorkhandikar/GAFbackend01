@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
@@ -32,11 +33,8 @@ const publicSubmitRules = [
 
 // GET /api/event-registrations - Get all event registrations
 export const getEventRegistrations = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, eventId } = req.query
-
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { eventId } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 10, maxLimit: 100 })
 
   const where = {}
   if (eventId) {
@@ -47,7 +45,7 @@ export const getEventRegistrations = asyncHandler(async (req, res) => {
     prisma.eventRegistration.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         event: {
@@ -67,10 +65,10 @@ export const getEventRegistrations = asyncHandler(async (req, res) => {
     success: true,
     data: registrations,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum
+      itemsPerPage: limit
     }
   })
 })

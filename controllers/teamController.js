@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
@@ -14,11 +15,8 @@ const teamMemberValidationRules = [
 
 // GET /api/team - Get all team members
 export const getTeamMembers = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, active } = req.query
-  
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { active } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 10, maxLimit: 100 })
   
   const where = {}
   if (active !== undefined) {
@@ -29,7 +27,7 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
     prisma.teamMember.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' }
     }),
     prisma.teamMember.count({ where })
@@ -39,10 +37,10 @@ export const getTeamMembers = asyncHandler(async (req, res) => {
     success: true,
     data: teamMembers,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum
+      itemsPerPage: limit
     }
   })
 })

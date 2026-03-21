@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
@@ -14,10 +15,8 @@ const heroSlideValidationRules = [
 
 // GET /api/hero-slides - List (admin: all, with pagination)
 export const getHeroSlides = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 50, isActive } = req.query
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { isActive } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 50, maxLimit: 100 })
 
   const where = {}
   if (isActive !== undefined) {
@@ -28,7 +27,7 @@ export const getHeroSlides = asyncHandler(async (req, res) => {
     prisma.heroSlide.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }]
     }),
     prisma.heroSlide.count({ where })
@@ -38,10 +37,10 @@ export const getHeroSlides = asyncHandler(async (req, res) => {
     success: true,
     data: slides,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum
+      itemsPerPage: limit
     }
   })
 })

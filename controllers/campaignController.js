@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
@@ -16,11 +17,11 @@ const campaignValidationRules = [
 
 // GET /api/campaigns - Get all campaigns
 export const getCampaigns = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, active, isActive } = req.query
-
-  const pageNum = Math.max(1, parseInt(String(page), 10) || 1)
-  const limitNum = Math.min(100, Math.max(1, parseInt(String(limit), 10) || 10))
-  const skip = (pageNum - 1) * limitNum
+  const { active, isActive } = req.query
+  const { page: pageNum, limit: limitNum, skip } = parsePageLimit(req.query, {
+    defaultLimit: 10,
+    maxLimit: 100
+  })
   
   const where = {}
   // Check for both 'active' and 'isActive' query parameters

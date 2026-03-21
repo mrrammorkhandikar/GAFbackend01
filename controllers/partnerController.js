@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
@@ -80,11 +81,8 @@ export const getPartners = asyncHandler(async (req, res) => {
     })
   }
 
-  const { page = 1, limit = 10, isActive, featured } = req.query
-
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { isActive, featured } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 10, maxLimit: 100 })
 
   const where = {}
 
@@ -100,7 +98,7 @@ export const getPartners = asyncHandler(async (req, res) => {
     prisma.partner.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' },
     }),
     prisma.partner.count({ where }),
@@ -110,10 +108,10 @@ export const getPartners = asyncHandler(async (req, res) => {
     success: true,
     data: partners,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum,
+      itemsPerPage: limit,
     },
   })
 })

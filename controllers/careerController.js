@@ -1,4 +1,5 @@
 import prisma from '../lib/prisma.js'
+import { parsePageLimit } from '../lib/pagination.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
@@ -13,11 +14,8 @@ const careerValidationRules = [
 
 // GET /api/careers - Get all careers
 export const getCareers = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, active } = req.query
-  
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { active } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 10, maxLimit: 100 })
   
   const where = {}
   if (active !== undefined) {
@@ -28,7 +26,7 @@ export const getCareers = asyncHandler(async (req, res) => {
     prisma.career.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -45,10 +43,10 @@ export const getCareers = asyncHandler(async (req, res) => {
     success: true,
     data: careers,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum
+      itemsPerPage: limit
     }
   })
 })
@@ -204,11 +202,8 @@ export const getPublicCareers = asyncHandler(async (req, res) => {
 
 // GET /api/career-applications - Get all career applications
 export const getCareerApplications = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, careerId } = req.query
-  
-  const pageNum = parseInt(page)
-  const limitNum = parseInt(limit)
-  const skip = (pageNum - 1) * limitNum
+  const { careerId } = req.query
+  const { page, limit, skip } = parsePageLimit(req.query, { defaultLimit: 10, maxLimit: 100 })
   
   const where = {}
   if (careerId) {
@@ -219,7 +214,7 @@ export const getCareerApplications = asyncHandler(async (req, res) => {
     prisma.careerApplication.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' },
       include: {
         career: {
@@ -239,10 +234,10 @@ export const getCareerApplications = asyncHandler(async (req, res) => {
     success: true,
     data: applications,
     pagination: {
-      currentPage: pageNum,
-      totalPages: Math.ceil(total / limitNum),
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
       totalItems: total,
-      itemsPerPage: limitNum
+      itemsPerPage: limit
     }
   })
 })

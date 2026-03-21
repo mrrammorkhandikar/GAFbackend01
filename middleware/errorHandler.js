@@ -1,8 +1,33 @@
 import { validationResult } from 'express-validator'
+import { Prisma } from '@prisma/client'
 
 // Error handling middleware
 export const errorHandler = (err, req, res, next) => {
   console.error(err.stack)
+
+  // Prisma connector / driver errors (often no `P` code): pooler, TLS, "prepared statement does not exist"
+  if (err instanceof Prisma.PrismaClientUnknownRequestError) {
+    const msg = err.message || ''
+    if (/prepared statement/i.test(msg)) {
+      console.error(
+        '[Prisma] Pooler incompatibility: add ?pgbouncer=true to DATABASE_URL (Supabase transaction pooler :6543).'
+      )
+    }
+    return res.status(503).json({
+      success: false,
+      message: 'Database temporarily unavailable. Please retry.',
+      error: process.env.NODE_ENV === 'development' ? msg : undefined
+    })
+  }
+
+  if (err instanceof Prisma.PrismaClientInitializationError) {
+    console.error('[Prisma] Init error:', err.message)
+    return res.status(503).json({
+      success: false,
+      message: 'Database connection failed.',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    })
+  }
 
   // Prisma errors
   if (err.code?.startsWith('P')) {
