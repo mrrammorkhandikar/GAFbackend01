@@ -1,23 +1,12 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
-
-// Configure seed script
-// To run: npx prisma db seed
-// Or: npm run seed
 
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-
-///////////////////////////
-// ADMIN AUTH
-///////////////////////////
 
 model Admin {
   id        String   @id @default(uuid())
@@ -28,76 +17,43 @@ model Admin {
   updatedAt DateTime @updatedAt
 }
 
-///////////////////////////
-// CAMPAIGNS
-///////////////////////////
-
 model Campaign {
-  id            String   @id @default(uuid())
-  title         String
-  slug          String   @unique
-  description   String
-  location      String
-  amount        Int?
-  raisedAmount  Int?
-  imageUrl      String?
-
-  // content structure (handled in Admin UI):
-  // {
-  //   about: string[]                // multiple paragraphs
-  //   impactGallery: string[]        // max 4 image URLs
-  //   keyFocusAreas: string[]        // max 8 UL points
-  // }
-  content       Json?
-
-  startDate     DateTime
-  endDate       DateTime?
-  isActive      Boolean  @default(true)
-
-  events        Event[]
-
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String     @id @default(uuid())
+  title        String
+  slug         String     @unique
+  description  String
+  location     String
+  amount       Int?
+  raisedAmount Int?
+  imageUrl     String?
+  content      Json?
+  startDate    DateTime
+  endDate      DateTime?
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  events       Event[]
+  donations    Donation[]
 }
-
-///////////////////////////
-// EVENTS
-///////////////////////////
 
 model Event {
-  id          String   @id @default(uuid())
-  title       String
-  slug        String   @unique
-  description String
-  imageUrl    String?
-  eventDate   DateTime
-  location    String
-  isActive    Boolean  @default(true)
-
-  // content structure:
-  // {
-  //   about: string[]                     // paragraphs
-  //   journey: {
-  //     title: string
-  //     description: string
-  //     imageUrl?: string
-  //   }[]
-  //   keyAchievements: string[]           // max 8 UL points
-  // }
-  content     Json?
-
-  campaignId  String?
-  campaign    Campaign? @relation(fields: [campaignId], references: [id])
-
-  registrations EventRegistration[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                    String              @id @default(uuid())
+  title                 String
+  slug                  String              @unique
+  description           String
+  imageUrl              String?
+  eventDate             DateTime
+  location              String
+  isActive              Boolean             @default(true)
+  content               Json?
+  campaignId            String?
+  registrationEnabled   Boolean             @default(false)
+  registrationFee       Float               @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  campaign              Campaign?           @relation(fields: [campaignId], references: [id])
+  registrations         EventRegistration[]
 }
-
-///////////////////////////
-// EVENT REGISTRATIONS
-///////////////////////////
 
 model EventRegistration {
   id        String   @id @default(uuid())
@@ -105,70 +61,51 @@ model EventRegistration {
   name      String
   email     String
   mobile    String
-
-  event     Event @relation(fields: [eventId], references: [id])
-
+  address   String?
+  amount    Float    @default(0)
+  currency  String   @default("INR")
+  status    String   @default("pending")
   createdAt DateTime @default(now())
-}
+  updatedAt DateTime @updatedAt
+  event     Event    @relation(fields: [eventId], references: [id])
 
-///////////////////////////
-// VOLUNTEER OPPORTUNITIES
-///////////////////////////
+  @@index([eventId])
+  @@index([status])
+}
 
 model VolunteerOpportunity {
-  id           String   @id @default(uuid())
+  id           String      @id @default(uuid())
   title        String
   description  String
-
-  // requirements: UL style points
-  // benefits: UL style points
   requirements Json
   benefits     Json
-
-  isActive     Boolean  @default(true)
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   volunteers   Volunteer[]
-
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
 }
 
-///////////////////////////
-// VOLUNTEER FORM SUBMISSIONS
-///////////////////////////
-
 model Volunteer {
-  id            String   @id @default(uuid())
+  id            String               @id @default(uuid())
   name          String
   email         String
   phone         String
   opportunityId String
-
+  createdAt     DateTime             @default(now())
   opportunity   VolunteerOpportunity @relation(fields: [opportunityId], references: [id])
-
-  createdAt     DateTime @default(now())
 }
 
-///////////////////////////
-// CAREER OPPORTUNITIES
-///////////////////////////
-
 model Career {
-  id             String   @id @default(uuid())
+  id             String              @id @default(uuid())
   title          String
   description    String
   location       String
-  employmentType String // Full-time, Part-time, Internship
-  isActive       Boolean  @default(true)
-
+  employmentType String
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
   applications   CareerApplication[]
-
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
 }
-
-///////////////////////////
-// CAREER APPLICATIONS
-///////////////////////////
 
 model CareerApplication {
   id        String   @id @default(uuid())
@@ -177,15 +114,9 @@ model CareerApplication {
   email     String
   phone     String
   resumeUrl String?
-
-  career    Career @relation(fields: [careerId], references: [id])
-
   createdAt DateTime @default(now())
+  career    Career   @relation(fields: [careerId], references: [id])
 }
-
-///////////////////////////
-// TEAM MEMBERS (STATIC)
-///////////////////////////
 
 model TeamMember {
   id          String   @id @default(uuid())
@@ -197,66 +128,27 @@ model TeamMember {
   linkedinUrl String?
   twitterUrl  String?
   isActive    Boolean  @default(true)
-
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
-///////////////////////////
-// PARTNERS
-///////////////////////////
-
-model Partner {
-  id               String   @id @default(uuid())
-  name             String
-  slug             String   @unique
-  type             String   // Organization, Individual, Corporate, NGO, etc.
-  logoUrl          String?
-  shortDescription String
-  websiteUrl       String?
-  country          String?
-  city             String?
-  isFeatured       Boolean  @default(false)
-  isActive         Boolean  @default(true)
-
-  // Rich storytelling content:
-  // {
-  //   about: string[]              // partner story paragraphs
-  //   programs: string[]           // joint programs/events summary bullets
-  //   highlights: string[]         // key impact points
-  //   quote?: {                    // optional quote block
-  //     text: string
-  //     author?: string
-  //     role?: string
-  //   }
-  // }
-  content          Json?
-
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-}
-
-///////////////////////////
-// DONATIONS
-///////////////////////////
 
 model Donation {
-  id          String   @id @default(uuid())
-  donorName   String
-  donorEmail  String
-  amount      Float
-  currency    String   @default("INR")
-  message     String?
-  isAnonymous Boolean  @default(false)
-  status      String   @default("pending")
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id            String    @id @default(uuid())
+  donorName     String
+  donorEmail    String
+  donorPhone    String?
+  donorAddress  String?
+  amount        Float
+  currency      String    @default("INR")
+  message       String?
+  isAnonymous   Boolean   @default(false)
+  status        String    @default("pending")
+  receiptUrl    String?
+  campaignId    String?
+  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
-
-///////////////////////////
-// CONTACT FORM
-///////////////////////////
 
 model ContactForm {
   id        String   @id @default(uuid())
@@ -265,7 +157,37 @@ model ContactForm {
   subject   String
   message   String
   status    String   @default("new")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+///////////////////////////
+// HERO SLIDER (homepage)
+///////////////////////////
+
+model HeroSlide {
+  id        String   @id @default(uuid())
+  imageUrl  String
+  title     String?  // optional caption
+  sortOrder Int      @default(0)  // lower = first
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Partner {
+  id               String   @id @default(uuid())
+  name             String
+  slug             String   @unique
+  type             String
+  shortDescription String
+  websiteUrl       String?
+  country          String?
+  city             String?
+  logoUrl          String?
+  content          Json?
+  isFeatured       Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

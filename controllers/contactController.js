@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { body } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
-
-const prisma = new PrismaClient()
+import { sendContactConfirmation, sendContactAdminAlert } from '../config/email.js'
 
 const contactValidationRules = [
   body('name').notEmpty().withMessage('Name is required'),
@@ -88,6 +87,10 @@ export const createContactForm = [
         message
       }
     })
+
+    // Send emails (non-blocking — don't fail the request if email fails)
+    sendContactConfirmation(email, name, subject).catch(console.error)
+    sendContactAdminAlert(name, email, subject, message).catch(console.error)
     
     res.status(201).json({
       success: true,
@@ -121,6 +124,30 @@ export const updateContactStatus = asyncHandler(async (req, res) => {
     success: true,
     message: 'Contact status updated successfully',
     data: updatedContact
+  })
+})
+
+export const deleteContactForm = asyncHandler(async (req, res) => {
+  const { id } = req.params
+
+  const contact = await prisma.contactForm.findUnique({
+    where: { id }
+  })
+
+  if (!contact) {
+    return res.status(404).json({
+      success: false,
+      message: 'Contact form submission not found'
+    })
+  }
+
+  await prisma.contactForm.delete({
+    where: { id }
+  })
+
+  res.json({
+    success: true,
+    message: 'Contact submission deleted successfully'
   })
 })
 

@@ -2,7 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import dotenv from 'dotenv'
-import { PrismaClient } from '@prisma/client'
+import prisma from './lib/prisma.js'
 
 // Import routes
 import campaignRoutes from './routes/campaigns.js'
@@ -18,6 +18,7 @@ import eventRegistrationRoutes from './routes/event-registrations.js'
 import adminRoutes from './routes/admin.js'
 import publicRoutes from './routes/public.js'
 import partnerRoutes from './routes/partners.js'
+import heroSlideRoutes from './routes/hero-slides.js'
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js'
@@ -29,7 +30,6 @@ dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3001
-const prisma = new PrismaClient()
 
 // Middleware
 app.use(helmet())
@@ -63,7 +63,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['X-Total-Count']
 }))
@@ -93,6 +93,7 @@ app.use('/api/careers', careerRoutes)
 app.use('/api/career-applications', careerApplicationRoutes)
 app.use('/api/event-registrations', eventRegistrationRoutes)
 app.use('/api/partners', partnerRoutes)
+app.use('/api/hero-slides', heroSlideRoutes)
 app.use('/api/admin', adminRoutes)
 
 // Public routes - Unrestricted access to data

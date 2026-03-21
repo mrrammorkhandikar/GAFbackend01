@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
-
-const prisma = new PrismaClient()
 
 // Validation rules for team member
 const teamMemberValidationRules = [

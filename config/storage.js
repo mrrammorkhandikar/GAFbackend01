@@ -7,6 +7,7 @@ export const initializeStorageBuckets = async () => {
     process.env.EVENTS_BUCKET    || 'events-images',
     process.env.TEAM_BUCKET      || 'team-photos',
     process.env.PARTNERS_BUCKET  || 'partners-logos',
+    process.env.HERO_SLIDES_BUCKET || 'hero-slides',
   ]
 
   let ok = 0
@@ -34,7 +35,8 @@ export const getBucketConfig = (bucketType) => {
     events: process.env.EVENTS_BUCKET || 'events-images',
     team: process.env.TEAM_BUCKET || 'team-photos',
     partners: process.env.PARTNERS_BUCKET || 'partners-logos',
-    donations: process.env.DONATIONS_BUCKET || 'receipts'
+    donations: process.env.DONATIONS_BUCKET || 'receipts',
+    heroSlides: process.env.HERO_SLIDES_BUCKET || 'hero-slides'
   }
 
   return configs[bucketType] || configs.campaigns

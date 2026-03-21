@@ -1,9 +1,7 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
-
-const prisma = new PrismaClient()
 
 const volunteerOpportunityValidationRules = [
   body('title').notEmpty().withMessage('Title is required'),

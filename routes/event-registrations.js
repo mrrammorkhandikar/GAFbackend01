@@ -3,11 +3,15 @@ import {
   getEventRegistrations,
   getEventRegistrationById,
   createEventRegistration,
-  deleteEventRegistration
+  deleteEventRegistration,
+  submitPublicEventRegistration,
+  updateEventRegistrationStatus
 } from '../controllers/eventRegistrationController.js'
 
 const router = express.Router()
 
+router.post('/submit', submitPublicEventRegistration)
+router.patch('/:id/status', updateEventRegistrationStatus)
 router.get('/', getEventRegistrations)
 router.get('/:id', getEventRegistrationById)
 router.post('/', createEventRegistration)

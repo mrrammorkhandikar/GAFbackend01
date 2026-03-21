@@ -1,12 +1,11 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadDocument, generateFileName } from '../middleware/upload.js'
 import { uploadFile } from '../config/supabase.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
-
-const prisma = new PrismaClient()
+import { sendCareerApplicationConfirmation, sendCareerApplicationAdminAlert } from '../config/email.js'
 
 const careerApplicationValidationRules = [
   body('name').notEmpty().withMessage('Name is required'),
@@ -105,6 +104,10 @@ export const createCareerApplication = [
         resumeUrl
       }
     })
+
+    // Send emails (non-blocking)
+    sendCareerApplicationConfirmation(email, name, career.title).catch(console.error)
+    sendCareerApplicationAdminAlert(name, email, phone, career.title).catch(console.error)
     
     res.status(201).json({
       success: true,

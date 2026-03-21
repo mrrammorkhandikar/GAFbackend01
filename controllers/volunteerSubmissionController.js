@@ -1,9 +1,8 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
-
-const prisma = new PrismaClient()
+import { sendVolunteerConfirmation, sendVolunteerAdminAlert } from '../config/email.js'
 
 const volunteerSubmissionValidationRules = [
   body('name').notEmpty().withMessage('Name is required'),
@@ -95,6 +94,10 @@ export const createVolunteerSubmission = [
         opportunityId
       }
     })
+
+    // Send emails (non-blocking)
+    sendVolunteerConfirmation(email, name, opportunity.title).catch(console.error)
+    sendVolunteerAdminAlert(name, email, phone, opportunity.title).catch(console.error)
     
     res.status(201).json({
       success: true,

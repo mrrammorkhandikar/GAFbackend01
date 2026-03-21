@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
 import { body, param, query } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
-
-const prisma = new PrismaClient()
 
 // Validation rules
 const campaignValidationRules = [
@@ -58,12 +56,16 @@ export const getCampaigns = asyncHandler(async (req, res) => {
   })
 })
 
-// GET /api/campaigns/:id - Get campaign by ID
+// UUID v4 pattern: 8-4-4-4-12 hex with hyphens
+const isUuid = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)
+
+// GET /api/campaigns/:idOrSlug - Get campaign by ID or slug (slug for pretty URLs)
 export const getCampaignById = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  
+  const { id: idOrSlug } = req.params
+  const where = isUuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
+
   const campaign = await prisma.campaign.findUnique({
-    where: { id },
+    where,
     include: {
       events: {
         where: { isActive: true },
@@ -71,14 +73,14 @@ export const getCampaignById = asyncHandler(async (req, res) => {
       }
     }
   })
-  
+
   if (!campaign) {
     return res.status(404).json({
       success: false,
       message: 'Campaign not found'
     })
   }
-  
+
   res.json({
     success: true,
     data: campaign

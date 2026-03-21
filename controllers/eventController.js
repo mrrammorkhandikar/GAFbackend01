@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
@@ -6,7 +6,22 @@ import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
 
-const prisma = new PrismaClient()
+const parseBool = (v, defaultValue = false) => {
+  if (v === undefined || v === null || v === '') return defaultValue
+  return v === true || v === 'true' || v === '1' || v === 1
+}
+
+async function attachRegistrationCounts(events) {
+  if (!events.length) return events
+  const ids = events.map((e) => e.id)
+  const counts = await prisma.eventRegistration.groupBy({
+    by: ['eventId'],
+    where: { eventId: { in: ids }, status: 'completed' },
+    _count: { _all: true }
+  })
+  const countMap = Object.fromEntries(counts.map((c) => [c.eventId, c._count._all]))
+  return events.map((e) => ({ ...e, registrationCount: countMap[e.id] ?? 0 }))
+}
 
 // Validation rules
 const eventValidationRules = [
@@ -60,10 +75,12 @@ export const getEvents = asyncHandler(async (req, res) => {
     }),
     prisma.event.count({ where })
   ])
-  
+
+  const data = await attachRegistrationCounts(events)
+
   res.json({
     success: true,
-    data: events,
+    data,
     pagination: {
       currentPage: pageNum,
       totalPages: Math.ceil(total / limitNum),
@@ -73,12 +90,16 @@ export const getEvents = asyncHandler(async (req, res) => {
   })
 })
 
-// GET /api/events/:id - Get event by ID
+// UUID v4 pattern
+const isUuid = (s) => typeof s === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(s)
+
+// GET /api/events/:idOrSlug - Get event by ID or slug (slug for pretty URLs)
 export const getEventById = asyncHandler(async (req, res) => {
-  const { id } = req.params
-  
+  const { id: idOrSlug } = req.params
+  const where = isUuid(idOrSlug) ? { id: idOrSlug } : { slug: idOrSlug }
+
   const event = await prisma.event.findUnique({
-    where: { id },
+    where,
     include: {
       campaign: {
         select: {
@@ -90,17 +111,21 @@ export const getEventById = asyncHandler(async (req, res) => {
       }
     }
   })
-  
+
   if (!event) {
     return res.status(404).json({
       success: false,
       message: 'Event not found'
     })
   }
-  
+
+  const registrationCount = await prisma.eventRegistration.count({
+    where: { eventId: event.id, status: 'completed' }
+  })
+
   res.json({
     success: true,
-    data: event
+    data: { ...event, registrationCount }
   })
 })
 
@@ -111,7 +136,11 @@ export const createEvent = [
   validateRequest,
   asyncHandler(async (req, res) => {
     const { title, slug, description, content, eventDate, location, campaignId } = req.body
-    
+    const registrationEnabled = parseBool(req.body.registrationEnabled)
+    const registrationFee = registrationEnabled
+      ? Math.max(0, parseFloat(String(req.body.registrationFee ?? 0).replace(/,/g, '')) || 0)
+      : 0
+
     // Check if slug already exists
     const existingEvent = await prisma.event.findUnique({
       where: { slug }
@@ -165,7 +194,9 @@ export const createEvent = [
         imageUrl,
         eventDate: new Date(eventDate),
         location,
-        campaignId: campaignId || null
+        campaignId: campaignId || null,
+        registrationEnabled,
+        registrationFee
       }
     })
     
@@ -186,7 +217,7 @@ export const updateEvent = [
   asyncHandler(async (req, res) => {
     const { id } = req.params
     const { title, slug, description, content, eventDate, location, campaignId, isActive } = req.body
-    
+
     const existingEvent = await prisma.event.findUnique({
       where: { id }
     })
@@ -197,6 +228,11 @@ export const updateEvent = [
         message: 'Event not found'
       })
     }
+
+    const registrationEnabled = parseBool(req.body.registrationEnabled, existingEvent.registrationEnabled ?? false)
+    const registrationFee = registrationEnabled
+      ? Math.max(0, parseFloat(String(req.body.registrationFee ?? 0).replace(/,/g, '')) || 0)
+      : 0
     
     // Check if new slug already exists
     if (slug && slug !== existingEvent.slug) {
@@ -260,7 +296,9 @@ export const updateEvent = [
         eventDate: eventDate ? new Date(eventDate) : existingEvent.eventDate,
         location,
         campaignId: campaignId !== undefined ? campaignId : existingEvent.campaignId,
-        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingEvent.isActive
+        isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingEvent.isActive,
+        registrationEnabled,
+        registrationFee
       }
     })
     
@@ -312,11 +350,12 @@ export const getPublicEvents = asyncHandler(async (req, res) => {
     const events = await prisma.event.findMany({
       where: { isActive: true },
       orderBy: { eventDate: 'asc' }
-    });
+    })
+    const data = await attachRegistrationCounts(events)
 
     res.json({
       success: true,
-      data: events
+      data
     });
   } catch (error) {
     console.error('Error fetching public events:', error);

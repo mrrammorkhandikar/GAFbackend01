@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 import { asyncHandler } from '../middleware/errorHandler.js'
 import { uploadImage, generateFileName } from '../middleware/upload.js'
 import { uploadFile, deleteFile } from '../config/supabase.js'
 import { body, param } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
-
-const prisma = new PrismaClient()
 
 // Validation rules for partner
 const partnerValidationRules = [
@@ -219,6 +217,13 @@ export const createPartner = [
   ...partnerValidationRules,
   validateRequest,
   asyncHandler(async (req, res) => {
+    if (!prisma.partner || typeof prisma.partner.findUnique !== 'function') {
+      return res.status(503).json({
+        success: false,
+        message: 'Partner database model is not available. Run: npx prisma migrate deploy && npx prisma generate',
+      })
+    }
+
     const {
       name,
       slug,
@@ -294,6 +299,13 @@ export const updatePartner = [
   ...partnerValidationRules,
   validateRequest,
   asyncHandler(async (req, res) => {
+    if (!prisma.partner || typeof prisma.partner.findUnique !== 'function') {
+      return res.status(503).json({
+        success: false,
+        message: 'Partner database model is not available. Run: npx prisma migrate deploy && npx prisma generate',
+      })
+    }
+
     const { id } = req.params
     const {
       name,
@@ -390,6 +402,13 @@ export const updatePartner = [
 
 // DELETE /api/partners/:id - Delete partner
 export const deletePartner = asyncHandler(async (req, res) => {
+  if (!prisma.partner || typeof prisma.partner.findUnique !== 'function') {
+    return res.status(503).json({
+      success: false,
+      message: 'Partner database model is not available. Run: npx prisma migrate deploy && npx prisma generate',
+    })
+  }
+
   const { id } = req.params
 
   const partner = await prisma.partner.findUnique({

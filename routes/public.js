@@ -1,8 +1,27 @@
 import express from 'express'
-import { PrismaClient } from '@prisma/client'
+import prisma from '../lib/prisma.js'
 
 const router = express.Router()
-const prisma = new PrismaClient()
+
+/** UPI / bank details for donate page (configure via env on server) */
+router.get('/donation-payment-info', (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+  let upiQrUrl = process.env.DONATION_UPI_QR_URL || ''
+  if (upiQrUrl && !upiQrUrl.startsWith('http')) {
+    upiQrUrl = `${frontendUrl.replace(/\/$/, '')}${upiQrUrl.startsWith('/') ? '' : '/'}${upiQrUrl}`
+  }
+
+  res.json({
+    success: true,
+    data: {
+      upiId: process.env.DONATION_UPI_ID || '',
+      upiQrUrl: upiQrUrl || `${frontendUrl.replace(/\/$/, '')}/images/donate-upi-qr.svg`,
+      bankName: process.env.DONATION_BANK_NAME || '',
+      bankAccount: process.env.DONATION_BANK_ACCOUNT || '',
+      bankIfsc: process.env.DONATION_BANK_IFSC || ''
+    }
+  })
+})
 
 // Public endpoint to get all data without restrictions
 router.get('/all-data', async (req, res) => {
@@ -109,6 +128,28 @@ router.get('/team', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching team members',
+      error: error.message
+    })
+  }
+})
+
+// Public endpoint to get hero slider images (active only, for homepage)
+router.get('/hero-slides', async (req, res) => {
+  try {
+    const slides = await prisma.heroSlide.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }]
+    })
+
+    res.json({
+      success: true,
+      data: slides
+    })
+  } catch (error) {
+    console.error('Error fetching hero slides:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching hero slides',
       error: error.message
     })
   }

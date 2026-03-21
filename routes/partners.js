@@ -11,16 +11,15 @@ import {
 
 const router = express.Router()
 
-// Admin / internal routes
-router.get('/', getPartners)
-router.get('/:id', getPartnerById)
-router.post('/', createPartner)
-router.put('/:id', updatePartner)
-router.delete('/:id', deletePartner)
-
-// Public routes
+// Public routes must be registered before /:id so "public" is not captured as an id
 router.get('/public/list/all', getPublicPartners)
 router.get('/public/:slug', getPublicPartnerBySlug)
 
-export default router
+// Admin / internal
+router.get('/', getPartners)
+router.post('/', createPartner)
+router.get('/:id', getPartnerById)
+router.put('/:id', updatePartner)
+router.delete('/:id', deletePartner)
 
+export default router
