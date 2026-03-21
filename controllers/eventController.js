@@ -14,13 +14,18 @@ const parseBool = (v, defaultValue = false) => {
 async function attachRegistrationCounts(events) {
   if (!events.length) return events
   const ids = events.map((e) => e.id)
-  const counts = await prisma.eventRegistration.groupBy({
-    by: ['eventId'],
-    where: { eventId: { in: ids }, status: 'completed' },
-    _count: { _all: true }
-  })
-  const countMap = Object.fromEntries(counts.map((c) => [c.eventId, c._count._all]))
-  return events.map((e) => ({ ...e, registrationCount: countMap[e.id] ?? 0 }))
+  try {
+    const counts = await prisma.eventRegistration.groupBy({
+      by: ['eventId'],
+      where: { eventId: { in: ids }, status: 'completed' },
+      _count: { _all: true }
+    })
+    const countMap = Object.fromEntries(counts.map((c) => [c.eventId, c._count._all]))
+    return events.map((e) => ({ ...e, registrationCount: countMap[e.id] ?? 0 }))
+  } catch (err) {
+    console.warn('attachRegistrationCounts skipped:', err.message)
+    return events.map((e) => ({ ...e, registrationCount: 0 }))
+  }
 }
 
 // Validation rules
