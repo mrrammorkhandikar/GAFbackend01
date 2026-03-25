@@ -25,7 +25,7 @@ export const getContactForms = asyncHandler(async (req, res) => {
     prisma.contactForm.findMany({
       where,
       skip,
-      take: limitNum,
+      take: limit,
       orderBy: { createdAt: 'desc' }
     }),
     prisma.contactForm.count({ where })
