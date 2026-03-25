@@ -15,6 +15,23 @@ model Admin {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  passwordResets AdminPasswordReset[]
+}
+
+model AdminPasswordReset {
+  id         String    @id @default(uuid())
+  adminId    String
+  otpHash    String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+  @@index([consumedAt])
 }
 
 model Campaign {
@@ -37,22 +54,22 @@ model Campaign {
 }
 
 model Event {
-  id                    String              @id @default(uuid())
-  title                 String
-  slug                  String              @unique
-  description           String
-  imageUrl              String?
-  eventDate             DateTime
-  location              String
-  isActive              Boolean             @default(true)
-  content               Json?
-  campaignId            String?
-  registrationEnabled   Boolean             @default(false)
-  registrationFee       Float               @default(0)
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
-  campaign              Campaign?           @relation(fields: [campaignId], references: [id])
-  registrations         EventRegistration[]
+  id                  String              @id @default(uuid())
+  title               String
+  slug                String              @unique
+  description         String
+  imageUrl            String?
+  eventDate           DateTime
+  location            String
+  isActive            Boolean             @default(true)
+  content             Json?
+  campaignId          String?
+  registrationEnabled Boolean             @default(false)
+  registrationFee     Float               @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  campaign            Campaign?           @relation(fields: [campaignId], references: [id])
+  registrations       EventRegistration[]
 }
 
 model EventRegistration {
@@ -133,21 +150,21 @@ model TeamMember {
 }
 
 model Donation {
-  id            String    @id @default(uuid())
-  donorName     String
-  donorEmail    String
-  donorPhone    String?
-  donorAddress  String?
-  amount        Float
-  currency      String    @default("INR")
-  message       String?
-  isAnonymous   Boolean   @default(false)
-  status        String    @default("pending")
-  receiptUrl    String?
-  campaignId    String?
-  campaign      Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  donorName    String
+  donorEmail   String
+  donorPhone   String?
+  donorAddress String?
+  amount       Float
+  currency     String    @default("INR")
+  message      String?
+  isAnonymous  Boolean   @default(false)
+  status       String    @default("pending")
+  receiptUrl   String?
+  campaignId   String?
+  campaign     Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 model ContactForm {
@@ -168,8 +185,8 @@ model ContactForm {
 model HeroSlide {
   id        String   @id @default(uuid())
   imageUrl  String
-  title     String?  // optional caption
-  sortOrder Int      @default(0)  // lower = first
+  title     String? // optional caption
+  sortOrder Int      @default(0) // lower = first
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

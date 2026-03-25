@@ -223,6 +223,22 @@ export const sendCareerApplicationAdminAlert = (name, email, phone, position) =>
     `),
   })
 
+// ─── Admin password reset (OTP) ────────────────────────────────────────────────
+
+export const sendAdminPasswordResetOtp = (to, otp) =>
+  sendEmail({
+    to,
+    subject: 'Admin password reset OTP',
+    html: wrap(`
+      ${heading('Admin password reset')}
+      ${para('Use the OTP below to reset your admin password. This OTP is valid for a short time.')}
+      <div style="margin:18px 0;padding:14px 18px;border-radius:12px;background:#fcf9e3;border:1px solid #f3e1a5;text-align:center;">
+        <div style="font-size:28px;letter-spacing:6px;font-weight:800;color:#6D190D;">${otp}</div>
+      </div>
+      ${para('If you did not request this, you can ignore this email.')}
+    `),
+  })
+
 // ─── Volunteer submission ──────────────────────────────────────────────────────
 
 export const sendVolunteerConfirmation = (to, name, opportunity) =>

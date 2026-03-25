@@ -1,5 +1,6 @@
 import '../lib/loadEnv.js'
 import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcrypt'
 
 const prisma = new PrismaClient()
 
@@ -7,23 +8,29 @@ async function seed() {
   try {
     console.log('🌱 Starting database seeding...')
     
-    // Create admin user if it doesn't exist
-    let admin = await prisma.admin.findUnique({
-      where: { email: 'admin@gaf.org' }
-    })
-    
-    if (!admin) {
-      admin = await prisma.admin.create({
-        data: {
-          email: 'admin@gaf.org',
-          password: '$2b$10$xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx', // bcrypt hash for 'password123'
-          isActive: true
-        }
-      })
-      console.log(`✅ Created admin user: ${admin.email}`)
-    } else {
-      console.log(`⚠️ Admin user already exists: ${admin.email}`)
+    // Admin seed (set via env; never log the password)
+    const adminEmail = process.env.ADMIN_SEED_EMAIL || 'admin@gaf.org'
+    const seedPassword = process.env.ADMIN_SEED_PASSWORD || ''
+
+    const data = {
+      email: adminEmail,
+      isActive: true,
     }
+
+    if (seedPassword) {
+      data.password = await bcrypt.hash(seedPassword, 10)
+    }
+
+    const admin = await prisma.admin.upsert({
+      where: { email: adminEmail },
+      create: {
+        ...data,
+        password: data.password || (await bcrypt.hash(String(process.env.ADMIN_DEFAULT_PASSWORD || 'change-me'), 10)),
+      },
+      update: data,
+    })
+
+    console.log(`✅ Admin ready: ${admin.email}${seedPassword ? ' (password updated from env)' : ''}`)
     
     // Create sample campaigns
     const campaigns = await prisma.campaign.createMany({
