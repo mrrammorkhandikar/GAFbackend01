@@ -145,3 +145,27 @@ export const getCareerApplicationById = asyncHandler(async (req, res) => {
     data: application
   })
 })
+
+export const deleteCareerApplication = asyncHandler(async (req, res) => {
+  const { id } = req.params
+
+  const application = await prisma.careerApplication.findUnique({
+    where: { id }
+  })
+
+  if (!application) {
+    return res.status(404).json({
+      success: false,
+      message: 'Career application not found'
+    })
+  }
+
+  await prisma.careerApplication.delete({
+    where: { id }
+  })
+
+  res.json({
+    success: true,
+    message: 'Career application deleted successfully'
+  })
+})
