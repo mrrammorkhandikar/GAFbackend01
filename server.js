@@ -46,6 +46,8 @@ app.use(cors({
     // In production, allow specific origins
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      'https://guruakanksha.org',
+      'https://www.guruakanksha.org',
       'https://gaf-frontend.vercel.app',
       'https://gafbackend.vercel.app'
     ].filter(Boolean) // Remove undefined values
