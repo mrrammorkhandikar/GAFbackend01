@@ -1,17 +1,36 @@
 import nodemailer from 'nodemailer'
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: parseInt(process.env.SMTP_PORT || '587'),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
+/** Vercel injects env at runtime; lazy transport avoids stale/empty auth at cold start. */
+function createMailTransport() {
+  const user = String(process.env.SMTP_USER || '').trim()
+  const pass = String(process.env.SMTP_PASS || '').trim()
+  if (!user || !pass) return null
 
-const FROM = `"${process.env.EMAIL_FROM_NAME || 'Guru Akanksha Foundation'}" <${process.env.EMAIL_FROM}>`
-const ADMIN = process.env.ADMIN_EMAIL
+  const host = String(process.env.SMTP_HOST || 'smtp.gmail.com').trim()
+  const port = parseInt(String(process.env.SMTP_PORT || '587'), 10) || 587
+  const secure = String(process.env.SMTP_SECURE || '').toLowerCase() === 'true'
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure,
+    auth: { user, pass },
+    // Serverless: do not pool SMTP connections across invocations
+    pool: false,
+    connectionTimeout: 25_000,
+    greetingTimeout: 25_000,
+    socketTimeout: 25_000,
+    requireTLS: !secure && port === 587,
+  })
+}
+
+function getFromHeader() {
+  const name = String(process.env.EMAIL_FROM_NAME || 'Guru Akanksha Foundation').trim()
+  const addr = String(process.env.EMAIL_FROM || process.env.SMTP_USER || '').trim()
+  return `"${name}" <${addr}>`
+}
+
+const ADMIN = () => String(process.env.ADMIN_EMAIL || process.env.EMAIL_FROM || '').trim()
 
 // Shared branded wrapper
 const wrap = (body) => `
@@ -73,18 +92,26 @@ const table = (rows) =>
 // ─── Core send helper ──────────────────────────────────────────────────────────
 
 export const sendEmail = async ({ to, subject, html }) => {
-  // Global kill‑switch: unless EMAIL_ENABLED === 'true', skip sending
-  if (process.env.EMAIL_ENABLED !== 'true') {
+  const enabled = String(process.env.EMAIL_ENABLED || '').toLowerCase() === 'true'
+  if (!enabled) {
     console.log(`[Email] Skipped (EMAIL_ENABLED is not 'true') — to=${to}, subject=${subject}`)
     return { success: false, skipped: true, reason: 'EMAIL_DISABLED' }
   }
+
+  const transporter = createMailTransport()
+  if (!transporter) {
+    console.error('[Email] SMTP_USER or SMTP_PASS missing/empty after trim — check Vercel Environment Variables')
+    return { success: false, error: 'SMTP_NOT_CONFIGURED' }
+  }
+
   try {
-    const info = await transporter.sendMail({ from: FROM, to, subject, html })
+    const info = await transporter.sendMail({ from: getFromHeader(), to, subject, html })
     console.log(`[Email] Sent to ${to} — ${info.messageId}`)
     return { success: true, messageId: info.messageId }
   } catch (err) {
-    console.error('[Email] Send error:', err.message)
-    return { success: false, error: err.message }
+    const extra = [err.code, err.response, err.command].filter(Boolean).join(' | ')
+    console.error('[Email] Send error:', err.message, extra || '')
+    return { success: false, error: err.message, code: err.code }
   }
 }
 
@@ -105,7 +132,7 @@ export const sendContactConfirmation = (to, name, subject) =>
 
 export const sendContactAdminAlert = (name, email, subject, message) =>
   sendEmail({
-    to: ADMIN,
+    to: ADMIN(),
     subject: `[Contact Form] New message from ${name}`,
     html: wrap(`
       ${heading('New Contact Form Submission')}
@@ -140,7 +167,7 @@ export const sendDonationConfirmation = (to, name, amount, currency, campaignTit
 
 export const sendDonationAdminAlert = (name, email, amount, currency) =>
   sendEmail({
-    to: ADMIN,
+    to: ADMIN(),
     subject: `[Donation] New donation from ${name} — ${currency} ${amount}`,
     html: wrap(`
       ${heading('New Donation Received')}
@@ -177,7 +204,7 @@ export const sendEventRegistrationApproved = (to, name, eventTitle, amount, curr
 
 export const sendEventRegistrationAdminAlert = (name, email, mobile, eventTitle, amount, currency) =>
   sendEmail({
-    to: ADMIN,
+    to: ADMIN(),
     subject: `[Event registration] ${name} — ${eventTitle}`,
     html: wrap(`
       ${heading('New event registration (pending approval)')}
@@ -210,7 +237,7 @@ export const sendCareerApplicationConfirmation = (to, name, position) =>
 
 export const sendCareerApplicationAdminAlert = (name, email, phone, position) =>
   sendEmail({
-    to: ADMIN,
+    to: ADMIN(),
     subject: `[Career Application] ${name} applied for ${position}`,
     html: wrap(`
       ${heading('New Job Application')}
@@ -255,7 +282,7 @@ export const sendVolunteerConfirmation = (to, name, opportunity) =>
 
 export const sendVolunteerAdminAlert = (name, email, phone, opportunity) =>
   sendEmail({
-    to: ADMIN,
+    to: ADMIN(),
     subject: `[Volunteer] New application from ${name} for ${opportunity}`,
     html: wrap(`
       ${heading('New Volunteer Application')}
