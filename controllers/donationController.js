@@ -45,7 +45,7 @@ export const getDonations = asyncHandler(async (req, res) => {
     where.status = status
   }
 
-  const [donations, total] = await Promise.all([
+  const [donations, total] = await prisma.$transaction([
     prisma.donation.findMany({
       where,
       skip,

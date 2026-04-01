@@ -83,6 +83,8 @@ export const getAdminProfile = asyncHandler(async (req, res) => {
 
 export const getAllAdminStats = asyncHandler(async (req, res) => {
   // Get counts for dashboard
+  // With Supabase pooler + connection_limit=1, parallel counts exhaust the pool → P2024 timeouts.
+  // $transaction([...]) runs queries sequentially on one connection.
   const [
     campaignsCount,
     eventsCount,
@@ -90,7 +92,7 @@ export const getAllAdminStats = asyncHandler(async (req, res) => {
     careersCount,
     donationsCount,
     contactsCount
-  ] = await Promise.all([
+  ] = await prisma.$transaction([
     prisma.campaign.count(),
     prisma.event.count(),
     prisma.volunteerOpportunity.count(),
@@ -117,7 +119,7 @@ export const getAdminRecentActivity = asyncHandler(async (req, res) => {
   const hours = Math.min(168, Math.max(1, parseInt(String(req.query.hours || '48'), 10) || 48))
   const since = new Date(Date.now() - hours * 60 * 60 * 1000)
 
-  const [donations, registrations] = await Promise.all([
+  const [donations, registrations] = await prisma.$transaction([
     prisma.donation.findMany({
       where: { createdAt: { gte: since } },
       orderBy: { createdAt: 'desc' },

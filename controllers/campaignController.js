@@ -29,7 +29,7 @@ export const getCampaigns = asyncHandler(async (req, res) => {
     where.isActive = (active === 'true' || isActive === 'true')
   }
   
-  const [campaigns, total] = await Promise.all([
+  const [campaigns, total] = await prisma.$transaction([
     prisma.campaign.findMany({
       where,
       skip,
