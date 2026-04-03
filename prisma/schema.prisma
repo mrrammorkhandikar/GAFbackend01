@@ -61,6 +61,7 @@ model Event {
   imageUrl            String?
   eventDate           DateTime
   location            String
+  isOnline            Boolean             @default(false)
   isActive            Boolean             @default(true)
   content             Json?
   campaignId          String?

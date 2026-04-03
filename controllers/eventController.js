@@ -12,6 +12,20 @@ const parseBool = (v, defaultValue = false) => {
   return v === true || v === 'true' || v === '1' || v === 1
 }
 
+/** Multipart sends `content` as a JSON string; Prisma `Json` expects an object/array. */
+function parseEventContent(raw, fallback) {
+  if (raw === undefined || raw === null || raw === '') return fallback
+  if (typeof raw === 'object') return raw
+  if (typeof raw === 'string') {
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return fallback
+    }
+  }
+  return fallback
+}
+
 async function attachRegistrationCounts(events) {
   if (!events.length) return events
   const ids = events.map((e) => e.id)
@@ -142,6 +156,7 @@ export const createEvent = [
   validateRequest,
   asyncHandler(async (req, res) => {
     const { title, slug, description, content, eventDate, location, campaignId } = req.body
+    const isOnline = parseBool(req.body.isOnline)
     const registrationEnabled = parseBool(req.body.registrationEnabled)
     const registrationFee = registrationEnabled
       ? Math.max(0, parseFloat(String(req.body.registrationFee ?? 0).replace(/,/g, '')) || 0)
@@ -191,15 +206,18 @@ export const createEvent = [
       }
     }
     
+    const parsedContent = parseEventContent(content, null)
+
     const event = await prisma.event.create({
       data: {
         title,
         slug,
         description,
-        content: content || null,
+        content: parsedContent,
         imageUrl,
         eventDate: new Date(eventDate),
         location,
+        isOnline,
         campaignId: campaignId || null,
         registrationEnabled,
         registrationFee
@@ -235,10 +253,20 @@ export const updateEvent = [
       })
     }
 
+    const isOnline = parseBool(req.body.isOnline, existingEvent.isOnline ?? false)
     const registrationEnabled = parseBool(req.body.registrationEnabled, existingEvent.registrationEnabled ?? false)
     const registrationFee = registrationEnabled
       ? Math.max(0, parseFloat(String(req.body.registrationFee ?? 0).replace(/,/g, '')) || 0)
       : 0
+
+    const parsedContent = parseEventContent(content, existingEvent.content)
+
+    const nextCampaignId =
+      campaignId === undefined
+        ? existingEvent.campaignId
+        : campaignId === '' || campaignId === null
+          ? null
+          : campaignId
     
     // Check if new slug already exists
     if (slug && slug !== existingEvent.slug) {
@@ -255,9 +283,9 @@ export const updateEvent = [
     }
     
     // Validate campaign exists if provided
-    if (campaignId) {
+    if (nextCampaignId) {
       const campaign = await prisma.campaign.findUnique({
-        where: { id: campaignId }
+        where: { id: nextCampaignId }
       })
       
       if (!campaign) {
@@ -297,11 +325,12 @@ export const updateEvent = [
         title,
         slug,
         description,
-        content: content || null,
+        content: parsedContent,
         imageUrl,
         eventDate: eventDate ? new Date(eventDate) : existingEvent.eventDate,
         location,
-        campaignId: campaignId !== undefined ? campaignId : existingEvent.campaignId,
+        isOnline,
+        campaignId: nextCampaignId,
         isActive: isActive !== undefined ? (isActive === 'true' || isActive === true) : existingEvent.isActive,
         registrationEnabled,
         registrationFee

@@ -5,6 +5,14 @@ import { Prisma } from '@prisma/client'
 export const errorHandler = (err, req, res, next) => {
   console.error(err.stack)
 
+  if (err instanceof Prisma.PrismaClientValidationError) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid request data',
+      error: process.env.NODE_ENV === 'development' ? err.message : undefined
+    })
+  }
+
   // Prisma connector / driver errors (often no `P` code): pooler, TLS, "prepared statement does not exist"
   if (err instanceof Prisma.PrismaClientUnknownRequestError) {
     const msg = err.message || ''
@@ -43,6 +51,13 @@ export const errorHandler = (err, req, res, next) => {
           success: false,
           message: 'Resource not found',
           error: err.message
+        })
+      case 'P2022':
+        return res.status(503).json({
+          success: false,
+          message:
+            'Database schema is out of date (e.g. missing column). Run `npx prisma migrate deploy` on the server database, then restart the API.',
+          error: process.env.NODE_ENV === 'development' ? err.message : undefined
         })
       default:
         return res.status(500).json({
