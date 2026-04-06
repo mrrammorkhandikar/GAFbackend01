@@ -59,6 +59,13 @@ export const errorHandler = (err, req, res, next) => {
             'Database schema is out of date (e.g. missing column). Run `npx prisma migrate deploy` on the server database, then restart the API.',
           error: process.env.NODE_ENV === 'development' ? err.message : undefined
         })
+      case 'P2003':
+        return res.status(409).json({
+          success: false,
+          message:
+            'Cannot delete this record because other data still references it (e.g. registrations). Remove related records first or try again after a backend update.',
+          error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        })
       default:
         return res.status(500).json({
           success: false,

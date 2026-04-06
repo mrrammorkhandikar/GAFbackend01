@@ -360,6 +360,11 @@ export const deleteEvent = asyncHandler(async (req, res) => {
     })
   }
   
+  await prisma.$transaction(async (tx) => {
+    await tx.eventRegistration.deleteMany({ where: { eventId: id } })
+    await tx.event.delete({ where: { id } })
+  })
+
   if (event.imageUrl) {
     try {
       const fileName = event.imageUrl.split('/').pop()
@@ -368,11 +373,7 @@ export const deleteEvent = asyncHandler(async (req, res) => {
       console.error('Error deleting image:', error)
     }
   }
-  
-  await prisma.event.delete({
-    where: { id }
-  })
-  
+
   res.json({
     success: true,
     message: 'Event deleted successfully'
