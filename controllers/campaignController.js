@@ -24,7 +24,7 @@ export const getCampaigns = asyncHandler(async (req, res) => {
   })
   
   const where = {}
-  // Check for both 'active' and 'isActive' query parameters
+   // Check for both 'active' and 'isActive' query parameters
   if (active !== undefined || isActive !== undefined) {
     where.isActive = (active === 'true' || isActive === 'true')
   }
