@@ -7,6 +7,71 @@ import { body, param, query } from 'express-validator'
 import { validateRequest } from '../middleware/errorHandler.js'
 import { getBucketConfig } from '../config/storage.js'
 
+function sanitizeStoredHref(raw) {
+  const value = String(raw ?? '').trim()
+  if (!value) return ''
+  const lower = value.toLowerCase()
+  if (
+    lower.startsWith('javascript:') ||
+    lower.startsWith('data:') ||
+    lower.startsWith('vbscript:')
+  ) {
+    return ''
+  }
+  if (/^(https?:\/\/|mailto:|tel:)/i.test(value)) return value
+  if (value.startsWith('/') && !value.startsWith('//')) return value
+  if (value.startsWith('#')) return value
+  return ''
+}
+
+function normalizeStoredGalleryItem(item) {
+  if (!item) return null
+  if (typeof item === 'string') {
+    const url = item.trim()
+    return url || null
+  }
+  if (typeof item !== 'object') return null
+  const url = typeof item.url === 'string' ? item.url.trim() : ''
+  if (!url) return null
+  const href = sanitizeStoredHref(item.href)
+  return href ? { url, href } : url
+}
+
+function sanitizeContentLinks(parsedContent) {
+  const content = parsedContent && typeof parsedContent === 'object' ? { ...parsedContent } : {}
+  if (content.featuredImageHref != null) {
+    const href = sanitizeStoredHref(content.featuredImageHref)
+    if (href) content.featuredImageHref = href
+    else delete content.featuredImageHref
+  }
+  return content
+}
+
+async function mergeGalleryUploads(galleryUrls, files) {
+  const next = Array.isArray(galleryUrls) ? [...galleryUrls] : []
+  for (let i = 0; i < 4; i++) {
+    const galleryFile = files[`galleryImage_${i}`]?.[0]
+    if (!galleryFile) continue
+    try {
+      const fileName = generateFileName(galleryFile.originalname, `gallery-${i}-`)
+      const bucketName = getBucketConfig('campaigns')
+      const uploadResult = await uploadFile(
+        bucketName,
+        fileName,
+        galleryFile.buffer,
+        galleryFile.mimetype
+      )
+      const prev = next[i]
+      const href = prev && typeof prev === 'object' ? sanitizeStoredHref(prev.href) : ''
+      while (next.length <= i) next.push(null)
+      next[i] = href ? { url: uploadResult.url, href } : uploadResult.url
+    } catch (error) {
+      console.error(`Error uploading gallery image ${i}:`, error)
+    }
+  }
+  return next.map(normalizeStoredGalleryItem).filter(Boolean)
+}
+
 // Validation rules
 const campaignValidationRules = [
   body('title').notEmpty().withMessage('Title is required'),
@@ -136,26 +201,12 @@ export const createCampaign = [
       parsedContent = {}
     }
     
-    // Upload gallery images and merge with any existing gallery URLs
-    const galleryUrls = Array.isArray(parsedContent.impactGallery) ? [...parsedContent.impactGallery] : []
-    for (let i = 0; i < 4; i++) {
-      const galleryFile = files[`galleryImage_${i}`]?.[0]
-      if (galleryFile) {
-        try {
-          const fileName = generateFileName(galleryFile.originalname, `gallery-${i}-`)
-          const bucketName = getBucketConfig('campaigns')
-          const uploadResult = await uploadFile(bucketName, fileName, galleryFile.buffer, galleryFile.mimetype)
-          while (galleryUrls.length <= i) galleryUrls.push(null)
-          galleryUrls[i] = uploadResult.url
-        } catch (error) {
-          console.error(`Error uploading gallery image ${i}:`, error)
-        }
-      }
-    }
+    const safeContent = sanitizeContentLinks(parsedContent)
+    const impactGallery = await mergeGalleryUploads(safeContent.impactGallery, files)
     
     const finalContent = {
-      ...parsedContent,
-      impactGallery: galleryUrls.filter(Boolean)
+      ...safeContent,
+      impactGallery
     }
     
     const campaign = await prisma.campaign.create({
@@ -249,25 +300,12 @@ export const updateCampaign = [
       parsedContent = existingCampaign.content || {}
     }
     
-    const galleryUrls = Array.isArray(parsedContent.impactGallery) ? [...parsedContent.impactGallery] : []
-    for (let i = 0; i < 4; i++) {
-      const galleryFile = files[`galleryImage_${i}`]?.[0]
-      if (galleryFile) {
-        try {
-          const fileName = generateFileName(galleryFile.originalname, `gallery-${i}-`)
-          const bucketName = getBucketConfig('campaigns')
-          const uploadResult = await uploadFile(bucketName, fileName, galleryFile.buffer, galleryFile.mimetype)
-          while (galleryUrls.length <= i) galleryUrls.push(null)
-          galleryUrls[i] = uploadResult.url
-        } catch (error) {
-          console.error(`Error uploading gallery image ${i}:`, error)
-        }
-      }
-    }
+    const safeContent = sanitizeContentLinks(parsedContent)
+    const impactGallery = await mergeGalleryUploads(safeContent.impactGallery, files)
     
     const finalContent = {
-      ...parsedContent,
-      impactGallery: galleryUrls.filter(Boolean)
+      ...safeContent,
+      impactGallery
     }
     
     const campaign = await prisma.campaign.update({
